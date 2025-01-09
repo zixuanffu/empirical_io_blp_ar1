@@ -39,3 +39,22 @@ mu <- blp_result[[3]]
 save(dt, delta, sigma, ivreg, beta, mu, var_exo, var_end, var_rand, file = "Data/Out/blp_results.rda")
 
 # end
+
+
+# joint estimation to get the standard errors with starting values from the previous estimation
+beta <- as.numeric(beta)
+theta_init <- c(sigma, beta)
+
+# theta <- theta_init
+# data <- dt
+# var_iv_new <- var_iv_instr
+# var_rand_coef <- var_rand
+# theta[3:length(theta)]
+
+theta_opt <- optim(theta_init, blp_moment_condition_full, data = dt, var_iv_new = var_iv_instr, var_rand_coef = var_rand)
+theta <- theta_opt$par
+
+# to get the standard errors
+# the following doesn't work:)
+# hessian <- theta_opt$hessian
+# se <- sqrt(diag(solve(hessian)))

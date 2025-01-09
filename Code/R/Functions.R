@@ -67,6 +67,53 @@ blp_moment_condition <- function(theta, data, var_iv_new, var_rand_coef) {
     return(gmm_obj)
 }
 
+blp_moment_condition_full <- function(theta, data, var_iv_new, var_rand_coef) {
+    delta_new <- c()
+    sigma <- theta[1]
+    rho <- theta[2]
+    # flag_cv_new <- c()
+    # iter_new <- c()
+    for (i in unique(data$year)) {
+        J <- data[year == i, .N]
+        sj <- data[year == i, mktshr]
+        mu <- sigma * outer(as.vector(as.matrix(data[year == i, ..var_rand_coef])), draw)
+        delta_init <- data[year == i, log(mktshr) - log(shr_0)]
+        contraction_result <- blp_contraction(sj, mu, delta_init)
+        delta_market <- contraction_result[[1]]
+        delta_new <- c(delta_new, delta_market)
+        # flag_cv_new <- c(flag_cv_new, contraction_result[[2]])
+        # iter_new <- c(iter_new, contraction_result[[3]])
+    }
+    # here we need to introduce dynamics
+    # for each y construct y_t-\rho*y_{t-1}
+
+    data$y <- delta_new
+    data <- panel(data, ~ name + year)
+    data[, y_ld := y - l(y, 1) * rho]
+    for (i in c("const", var_end, var_exo)) {
+        data[, (paste0(i, "_ld")) := get(i) - l(get(i), 1) * rho]
+    }
+    data <- unpanel(data)
+
+    # esitmation of linear parameters
+    y_lhs <- as.vector(data[, y_ld])
+    obs_used <- !is.na(y_lhs)
+    y_lhs <- y_lhs[obs_used]
+
+    rhs <- paste0(c("const", var_end, var_exo), split = "_ld")
+    x_rhs <- as.matrix(data[, ..rhs])
+    x_rhs <- x_rhs[obs_used, ]
+
+    residual <- y_lhs - x_rhs %*% theta[3:length(theta)]
+    var_xz <- c(paste0(var_exo, split = "_ld"), var_iv_new)
+
+    Z <- as.matrix(data[obs_used, ..var_xz])
+    W <- solve(t(Z) %*% Z)
+    g <- t(Z) %*% residual
+    gmm_obj <- t(g) %*% W %*% g
+    return(gmm_obj)
+}
+
 blp_intermediate <- function(theta, data, var_iv_new, var_rand_coef) {
     delta_new <- c()
     sigma <- theta[1]
