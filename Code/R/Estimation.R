@@ -3,14 +3,13 @@ pacman::p_load(data.table, fixest, gmm)
 
 var_exo <- c("hp2wt", "air", "dpm", "size")
 var_end <- c("p")
-var_rand <- c("size")
+var_rand <- c("const") # the random coefficient can be on the const term as well.
 
 # the main part
 
 source("Code/R/Functions.R")
 # load the data
 dt <- readRDS("Data/Out/carpanel_q4.rds")
-
 # draw 500 normal random draws to approximate the integral
 n <- 500
 # draw in the normal(0, 1)
@@ -25,9 +24,9 @@ var_iv_instr <- c("hp2wt_instr", "air_instr", "dpm_instr", "size_instr")
 
 # optim
 setFixest_notes(FALSE) # suppress fixest notes
-sigma_opt <- optim(c(2, 0.5), blp_moment_condition, data = dt, var_iv_new = var_iv_instr)
+sigma_opt <- optim(c(2, 0.5), blp_moment_condition, data = dt, var_iv_new = var_iv_instr, var_rand_coef = var_rand)
 sigma <- sigma_opt$par
-blp_result <- blp_intermediate(sigma, dt, var_iv_instr)
+blp_result <- blp_intermediate(sigma, dt, var_iv_instr, var_rand)
 ivreg <- blp_result[[2]]
 summary(ivreg, cluster = "modelid")
 etable(ivreg,
@@ -37,6 +36,6 @@ etable(ivreg,
 beta <- ivreg$coefficients
 delta <- blp_result[[1]]
 mu <- blp_result[[3]]
-save(dt, delta, sigma, ivreg, beta, mu, var_exo, var_end, file = "Data/Out/blp_results.rda")
+save(dt, delta, sigma, ivreg, beta, mu, var_exo, var_end, var_rand, file = "Data/Out/blp_results.rda")
 
 # end

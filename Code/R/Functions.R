@@ -26,7 +26,7 @@ blp_contraction <- function(sj, mu, delta_init) {
 }
 
 # gmm estimation (concentrate out beta)
-blp_moment_condition <- function(theta, data, var_iv_new) {
+blp_moment_condition <- function(theta, data, var_iv_new, var_rand_coef) {
     delta_new <- c()
     sigma <- theta[1]
     rho <- theta[2]
@@ -35,7 +35,7 @@ blp_moment_condition <- function(theta, data, var_iv_new) {
     for (i in unique(data$year)) {
         J <- data[year == i, .N]
         sj <- data[year == i, mktshr]
-        mu <- sigma * outer(data[year == i, size], draw)
+        mu <- sigma * outer(as.vector(as.matrix(data[year == i, ..var_rand_coef])), draw)
         delta_init <- data[year == i, log(mktshr) - log(shr_0)]
         contraction_result <- blp_contraction(sj, mu, delta_init)
         delta_market <- contraction_result[[1]]
@@ -67,17 +67,18 @@ blp_moment_condition <- function(theta, data, var_iv_new) {
     return(gmm_obj)
 }
 
-blp_intermediate <- function(theta, data, var_iv_new) {
+blp_intermediate <- function(theta, data, var_iv_new, var_rand_coef) {
     delta_new <- c()
     sigma <- theta[1]
     rho <- theta[2]
+    var_rand <- var_rand_coef
     mu_new <- c()
     # flag_cv_new <- c()
     # iter_new <- c()
     for (i in unique(data$year)) {
         J <- data[year == i, .N]
         sj <- data[year == i, mktshr]
-        mu <- sigma * outer(data[year == i, size], draw)
+        mu <- sigma * outer(as.vector(as.matrix(data[year == i, ..var_rand_coef])), draw)
         delta_init <- data[year == i, log(mktshr) - log(shr_0)]
         contraction_result <- blp_contraction(sj, mu, delta_init)
         delta_market <- contraction_result[[1]]
